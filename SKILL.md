@@ -142,7 +142,7 @@ print(f"PAPER_TITLE={title_clean}")
 - 工程型：`~/.claude/skills/nju-se-thesis-self-check/references/engineering-50.md`
 - 学术型：`~/.claude/skills/nju-se-thesis-self-check/references/academic-50.md`
 
-不要混读两份。条目分布为 5 条红线 + 30 条学术质量 + 10 条结构内容 + **6 条格式严重问题**（共 51 条）。
+不要混读两份。条目分布为 5 条红线 + 30 条学术质量 + 10 条结构内容 + **6 条参考文献问题**（共 51 条）。
 
 ### 步骤 4：红线扫描（先跑 5 条）
 
@@ -235,7 +235,7 @@ print(f"PAPER_TITLE={title_clean}")
 
 ---
 
-## 五、格式严重问题（6 条）
+## 五、参考文献问题（6 条）
 
 [逐条展开]
 
