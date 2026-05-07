@@ -97,6 +97,64 @@ def extract_title(pages: list[dict], fallback_filename: str) -> str:
     return Path(fallback_filename).stem
 
 
+ABSTRACT_HEADER_CN = re.compile(r'^\s*摘\s*要\s*$')
+ABSTRACT_HEADER_EN = re.compile(r'^\s*ABSTRACT\s*$', re.IGNORECASE)
+KEYWORD_END = re.compile(r'^\s*(关\s*键\s*词|关\s*键\s*字|Key\s*[Ww]ords?)\s*[：:]', re.IGNORECASE)
+ABSTRACT_BOILERPLATE = (
+    '研究生毕业论文', '中文摘要首页', '英文摘要首页', '首页用纸',
+    '毕业论文题目', '硕士生姓名', '指导教师', '学位类别',
+    'THESIS:', 'SPECIALIZATION:', 'POSTGRADUATE:', 'MENTOR:',
+    'Adissertationsubmittedto', 'Software Engineering',
+)
+# 独占整行时跳过（页眉/页脚常见短文本）。区别于子串匹配，这里要求整行等于。
+ABSTRACT_HEADER_NOISE = {
+    '中文摘要', '英文摘要', 'CHINESE ABSTRACT', 'ENGLISH ABSTRACT',
+    'ABSTRACT', '摘要',
+}
+
+
+def extract_abstracts(pages: list[dict]) -> tuple[str, str]:
+    """从前 15 页提取中英文摘要正文。返回 (中文摘要, 英文摘要)，缺失则为空串。
+
+    切分逻辑：扫描前 15 页文本行，遇到独占行的「摘 要」/「ABSTRACT」标题进入对应模式，
+    收集后续正文到「关键词:」/「Keywords:」止；过程中跳过页眉页脚模板字段、罗马数字页码。
+    """
+    cn_lines: list[str] = []
+    en_lines: list[str] = []
+    mode = None  # 'cn' / 'en' / None
+    for p in pages[:15]:
+        for raw in p['text'].split('\n'):
+            stripped = raw.strip()
+            if not stripped:
+                continue
+            # 标题行触发模式切换（标题本身不收入正文）
+            if ABSTRACT_HEADER_CN.match(stripped):
+                mode = 'cn'
+                continue
+            if ABSTRACT_HEADER_EN.match(stripped):
+                mode = 'en'
+                continue
+            if mode is None:
+                continue
+            # 跳过页眉页脚模板（NJU 论文常见样板字段）
+            if any(b in stripped for b in ABSTRACT_BOILERPLATE):
+                continue
+            # 跳过独占行的"中文摘要 / 英文摘要 / ABSTRACT"等页眉
+            if stripped in ABSTRACT_HEADER_NOISE:
+                continue
+            # 跳过纯页码（罗马数字 I/II/III 或阿拉伯数字 1-3 位）
+            if re.match(r'^[IVXivx]+$|^\d{1,3}$', stripped):
+                continue
+            # 收集到关键词行后结束当前模式（关键词行本身保留）
+            if mode == 'cn':
+                cn_lines.append(stripped)
+            elif mode == 'en':
+                en_lines.append(stripped)
+            if KEYWORD_END.match(stripped):
+                mode = None
+    return '\n'.join(cn_lines), '\n'.join(en_lines)
+
+
 def extract_metadata(pages: list[dict]) -> dict:
     """提取论文元信息"""
     full_text = '\n'.join(p['text'] for p in pages)
@@ -137,15 +195,18 @@ def build_skeleton_md(pdf_path: Path, pages: list[dict], chapters: list[dict], m
         f'- 参考文献数: {meta["ref_count"]}',
         f'- 参考文献中含 GitHub/StackOverflow 链接数: {meta["github_link_count"]}',
         '',
-        '## 摘要',
     ]
-    # 摘要：取前 3 页中含「摘要」关键词的段落
-    abstract = ''
-    for p in pages[:3]:
-        if '摘要' in p['text']:
-            abstract = p['text']
-            break
-    lines.append('> ' + abstract.replace('\n', '\n> '))
+    cn_abs, en_abs = extract_abstracts(pages)
+    lines += ['## 中文摘要']
+    if cn_abs:
+        lines.append('> ' + cn_abs.replace('\n', '\n> '))
+    else:
+        lines.append('> （未抽取到中文摘要——摘要可能位于第 15 页之后或格式异常，请人工核查）')
+    lines += ['', '## 英文摘要']
+    if en_abs:
+        lines.append('> ' + en_abs.replace('\n', '\n> '))
+    else:
+        lines.append('> （未抽取到英文摘要）')
     lines += ['', '## 目录树']
     for c in chapters:
         lines.append(f"- {c['title']} (p.{c['page_start']}-{c['page_end']})")
