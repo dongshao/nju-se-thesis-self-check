@@ -6,15 +6,28 @@ CHAPTER_PATTERN = re.compile(r'^第[一二三四五六七八九十]+章\s*\S*')
 
 
 def split_chapters(pages: list[dict]) -> list[dict]:
-    """按 '第X章' 切章节。返回 [{'title': str, 'page_start': int, 'page_end': int, 'text': str}, ...]"""
+    """按 '第X章' 切章节。同名章只取首次出现，避开 NJU 论文页眉里反复出现的"第N章"。
+
+    返回 [{'title': str, 'page_start': int, 'page_end': int, 'text': str}, ...]
+    """
     markers = []  # [(page_no, title)]
+    seen_keys = set()  # 用"第N章"前缀去重
+    chap_key_re = re.compile(r'^第[一二三四五六七八九十]+章')
     for p in pages:
         for line in p['text'].split('\n'):
             line = line.strip()
             m = CHAPTER_PATTERN.match(line)
-            if m:
+            if not m:
+                continue
+            # 跳过目录里的伪 marker：含连续点（". ."）或末尾跟数字（"... 1"）
+            if '. .' in line or re.search(r'\d+\s*$', line):
+                continue
+            key_match = chap_key_re.match(line)
+            key = key_match.group(0) if key_match else line
+            if key not in seen_keys:
+                seen_keys.add(key)
                 markers.append((p['page_no'], line))
-                break  # 一页只算第一个章节标记
+            break  # 一页只算第一个章节标记
 
     if not markers:
         # 退化策略：按页均分 5 段
