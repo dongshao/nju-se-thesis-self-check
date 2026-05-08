@@ -46,7 +46,6 @@ ENGINEERING_GRAIN = {
     "ENG-A-18": "chunks",             # 安全 keywords
     "ENG-A-19": "chunks",             # LLM 指标
     "ENG-A-20": "chunks",             # LLM 安全机制
-    "ENG-A-21": "chunks",             # 失败案例段落
     "ENG-A-22": "chunks",             # 量化对比词
     "ENG-A-23": "chunks",             # 数据一致性
     "ENG-A-24": "page-image",         # 界面截图视觉判定

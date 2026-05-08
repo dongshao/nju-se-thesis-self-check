@@ -57,7 +57,6 @@ ENGINEERING_RANGE = {
     "ENG-A-18": "ch3+ch4",                                  # 安全设计
     "ENG-A-19": "all-body",                                 # LLM 类先判型再统计
     "ENG-A-20": "all-body",                                 # LLM 安全机制
-    "ENG-A-21": "test-ch",                                  # 失败案例
     "ENG-A-22": "abstract-cn+ch1+last-ch+test-ch",          # 业务价值量化
     "ENG-A-23": "ch3+ch4",                                  # 数据一致性
     "ENG-A-24": "screenshots",                              # 界面截图视觉
